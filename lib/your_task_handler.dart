@@ -21,7 +21,7 @@ class MyTaskHandler extends TaskHandler {
       "timestampMillis": timestamp.millisecondsSinceEpoch,
     };
     FlutterForegroundTask.sendDataToMain(data);
-    print('event called');
+    print('event .');
   }
 
   // Called when the task is destroyed.
