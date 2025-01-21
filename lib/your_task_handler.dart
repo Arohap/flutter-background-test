@@ -1,18 +1,21 @@
 import 'dart:convert';
-import 'dart:ffi';
-import 'dart:isolate';
-import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
-void startCallback() {
+void startCallback() async{
   FlutterForegroundTask.setTaskHandler(MyTaskHandler());
 }
 
 class MyTaskHandler extends TaskHandler {
+  late String trackingId;
+  late String token;
   // Called when the task is started.
+
+
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     print('onStart(starter: ${starter.name})');
@@ -23,18 +26,20 @@ class MyTaskHandler extends TaskHandler {
   void onRepeatEvent(DateTime timestamp) async {
     final locationResponse = await _getLocation();
     if(locationResponse == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    trackingId =  await prefs.getString('trackingId').toString();
+    token =  await prefs.getString('token').toString();
 
     // create request body
     List<Map<String, dynamic>> body = [
       {
-        "trackingId": "3",
+        "trackingId": trackingId,
         "loc": "${locationResponse["lat"] as double},${locationResponse["long"] as double}",
         "dateTime": locationResponse["time"] as String,
       }
     ];
 
-    String sampleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6IjEiLCJOYW1lU3VybmFtZSI6IkjDnFNFWUlOIMOWWkRFTcSwUiIsIlVzZXJuYW1lIjoidGVzdCIsIkVtYWlsIjoicG9ydGFsQG11dGFzcG9ydGFsLmNvbSIsIlBob25lTnVtYmVyIjoiNTQ0NDkwODA4OCIsIlN5c3RlbVJvbGUiOiIyIiwiZXhwIjoxNzM3NTMyNTk2fQ.hbDxwnTcVwEMCDG4XMMzpgnXqyUHSaa39c8E8_qPJy0";
-    final response = await _uploadToServer(sampleToken, body);
+    final response = await _uploadToServer(token, body);
     if(response){
       print("Successful: ${locationResponse["lat"] as double},${locationResponse["long"] as double}");
     }else{

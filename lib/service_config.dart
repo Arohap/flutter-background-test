@@ -4,13 +4,14 @@ import 'package:flutter_background_test/your_task_handler.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_foreground_task/models/notification_permission.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> requestPermissions() async {
   // Android 13+, you need to allow notification permission to display foreground service notification.
   //
   // iOS: If you need notification, ask for permission.
   final NotificationPermission notificationPermission =
-  await FlutterForegroundTask.checkNotificationPermission();
+      await FlutterForegroundTask.checkNotificationPermission();
   if (notificationPermission != NotificationPermission.granted) {
     await FlutterForegroundTask.requestNotificationPermission();
   }
@@ -23,7 +24,6 @@ Future<void> requestPermissions() async {
       // This function requires `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission.
       await FlutterForegroundTask.requestIgnoreBatteryOptimization();
     }
-
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -41,7 +41,7 @@ void initService() {
       channelId: 'foreground_service',
       channelName: 'Foreground Service Notification',
       channelDescription:
-      'This notification appears when the foreground service is running.',
+          'This notification appears when the foreground service is running.',
       onlyAlertOnce: true,
     ),
     iosNotificationOptions: const IOSNotificationOptions(
@@ -58,10 +58,16 @@ void initService() {
   );
 }
 
-Future<ServiceRequestResult> startService() async {
+Future<ServiceRequestResult> startService(
+    String trackingId, String token) async {
   if (await FlutterForegroundTask.isRunningService) {
     return FlutterForegroundTask.restartService();
   } else {
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('trackingId', trackingId);
+    await prefs.setString('token', token);
+
     return FlutterForegroundTask.startService(
       serviceId: 256,
       notificationTitle: 'Foreground Service is running',
@@ -71,7 +77,8 @@ Future<ServiceRequestResult> startService() async {
         const NotificationButton(id: 'btn_hello', text: 'hello'),
       ],
       notificationInitialRoute: '/',
-      callback: startCallback,
+      callback:  startCallback
+
     );
   }
 }

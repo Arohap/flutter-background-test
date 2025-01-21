@@ -20,7 +20,7 @@ class _MainAppState extends State<MainApp> {
       final dynamic timestampMillis = data["timestampMillis"];
       if (timestampMillis != null) {
         final DateTime timestamp =
-            DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
+        DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
         print('timestamp: ${timestamp.toString()}');
       }
     }
@@ -52,7 +52,11 @@ class _MainAppState extends State<MainApp> {
       home: Scaffold(
         body: Center(
           child: MaterialButton(
-            onPressed: () => startService(),
+            onPressed: () {
+              const trackingId = "3";
+              const sampleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6IjEiLCJOYW1lU3VybmFtZSI6IkjDnFNFWUlOIMOWWkRFTcSwUiIsIlVzZXJuYW1lIjoidGVzdCIsIkVtYWlsIjoicG9ydGFsQG11dGFzcG9ydGFsLmNvbSIsIlBob25lTnVtYmVyIjoiNTQ0NDkwODA4OCIsIlN5c3RlbVJvbGUiOiIyIiwiZXhwIjoxNzM3NTMyNTk2fQ.hbDxwnTcVwEMCDG4XMMzpgnXqyUHSaa39c8E8_qPJy0";
+              startService(trackingId, sampleToken);
+            },
             child: const Text("Start service"),
           ),
         ),
