@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_background_test/your_task_handler.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_foreground_task/models/notification_permission.dart';
+import 'package:geolocator/geolocator.dart';
 
 Future<void> requestPermissions() async {
   // Android 13+, you need to allow notification permission to display foreground service notification.
@@ -23,15 +24,13 @@ Future<void> requestPermissions() async {
       await FlutterForegroundTask.requestIgnoreBatteryOptimization();
     }
 
-    // Use this utility only if you provide services that require long-term survival,
-    // such as exact alarm service, healthcare service, or Bluetooth communication.
-    //
-    // This utility requires the "android.permission.SCHEDULE_EXACT_ALARM" permission.
-    // Using this permission may make app distribution difficult due to Google policy.
-    if (!await FlutterForegroundTask.canScheduleExactAlarms) {
-      // When you call this function, will be gone to the settings page.
-      // So you need to explain to the user why set it.
-      await FlutterForegroundTask.openAlarmsAndRemindersSettings();
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permission denied.");
+      }
     }
   }
 }

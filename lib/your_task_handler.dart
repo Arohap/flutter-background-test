@@ -1,5 +1,10 @@
-// The callback function should always be a top-level or static function.
+import 'dart:convert';
+import 'dart:ffi';
+import 'dart:isolate';
+import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 @pragma('vm:entry-point')
 void startCallback() {
@@ -15,13 +20,86 @@ class MyTaskHandler extends TaskHandler {
 
   // Called based on the eventAction set in ForegroundTaskOptions.
   @override
-  void onRepeatEvent(DateTime timestamp) {
-    // Send data to main isolate.
-    final Map<String, dynamic> data = {
-      "timestampMillis": timestamp.millisecondsSinceEpoch,
-    };
-    FlutterForegroundTask.sendDataToMain(data);
-    print('event .');
+  void onRepeatEvent(DateTime timestamp) async {
+    final locationResponse = await _getLocation();
+    if(locationResponse == null) return;
+
+    // create request body
+    List<Map<String, dynamic>> body = [
+      {
+        "trackingId": "3",
+        "loc": "${locationResponse["lat"] as double},${locationResponse["long"] as double}",
+        "dateTime": locationResponse["time"] as String,
+      }
+    ];
+
+    String sampleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6IjEiLCJOYW1lU3VybmFtZSI6IkjDnFNFWUlOIMOWWkRFTcSwUiIsIlVzZXJuYW1lIjoidGVzdCIsIkVtYWlsIjoicG9ydGFsQG11dGFzcG9ydGFsLmNvbSIsIlBob25lTnVtYmVyIjoiNTQ0NDkwODA4OCIsIlN5c3RlbVJvbGUiOiIyIiwiZXhwIjoxNzM3NTMyNTk2fQ.hbDxwnTcVwEMCDG4XMMzpgnXqyUHSaa39c8E8_qPJy0";
+    final response = await _uploadToServer(sampleToken, body);
+    if(response){
+      print("Successful: ${locationResponse["lat"] as double},${locationResponse["long"] as double}");
+    }else{
+      print("Fail: ${locationResponse["lat"] as double},${locationResponse["long"] as double}");
+    }
+  }
+
+  Future<Map<String, dynamic>?> _getLocation() async {
+    try {
+      // check gps enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print("Location services are disabled.");
+      }
+
+      // check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print("Location permission denied.");
+        }
+      }
+
+      // when user denied location permission forever
+      if (permission == LocationPermission.deniedForever) {
+        print("Location permission permanently denied.");
+      }
+
+      // receive location
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      return {
+        "lat": position.latitude,
+        "long": position.longitude,
+        "time": DateTime.now().toUtc().toIso8601String()
+      };
+    } catch (e) {
+      print("Error: $e");
+      return null;
+    }
+  }
+
+  Future<bool> _uploadToServer(String token,List<Map<String, dynamic>> body) async{
+    try {
+      final url = Uri.parse('https://api.mutasportal.com/TrackingLog/Insert');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(body),
+      );
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      print("Error fetching location or sending to API: $e");
+      return false;
+    }
   }
 
   // Called when the task is destroyed.
